@@ -1,13 +1,12 @@
-
 from peewee import *
 
 from database import *
 
 
-class Product(Model):
+class Store(Model):
     solotodo_id = IntegerField()
     name = CharField()
-    url = CharField()
-
+    logo_url = CharField()
+    
     class Meta:
         database = db

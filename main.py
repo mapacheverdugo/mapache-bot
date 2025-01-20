@@ -1,32 +1,38 @@
-import datetime
+import locale
 import os
 
 import libs.secret as sc
 from database import *
-from libs.solotodo.main import SoloTodo
+from libs.solotodo.solotodo import SoloTodo
 from messager import TeleBotMessager
 from models.process_step import ProcessStep
 from models.user import User
 
+locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+
 messager = TeleBotMessager(sc.api_key_telegram)
 solotodo = SoloTodo(messager)
 
-
-   
 @messager.message_handler(commands=['exit', 'cancel'])
 def exit(message):
     chat_id = message.chat.id
+    
     user = get_or_create_user(chat_id)
-
     user.current_step = ProcessStep.INITIAL.value
     user.save()
 
-    messager.send_message(chat_id, "Si necesitas otra cosa, ¡aquí estaré!")
+    messager.send_message(chat_id, "Si necesitas otra cosa, ¡aquí estaré! Recuerda que siempre puedes escribir /help para ver los comandos disponibles")
 
 
 @messager.message_handler(commands=['start', 'help'])
 def start(message):
     chat_id = message.chat.id
+
+    user = get_or_create_user(chat_id)
+    user.current_step = ProcessStep.INITIAL.value
+    user.save()
+
+
     msgLines = [
         "¡Hola\! Soy el Mapache Bot, estos son mis comandos",
         "",
