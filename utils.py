@@ -2,7 +2,8 @@ from babel.numbers import format_currency as _format_currency
 
 
 def format_currency(value):
-    return _format_currency(value, 'CLP', locale='es_CL')
+    text = _format_currency(value, 'CLP', locale='es_CL')
+    return text
 
 def escape_markdown_v2(str):
     str = str.replace("!", "\\!")

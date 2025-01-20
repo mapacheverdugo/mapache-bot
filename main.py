@@ -68,7 +68,7 @@ def everything_else(message):
         
 
 def main():
-    os.system('cls' if os.name == 'nt' else 'clear')
+    #os.system('cls' if os.name == 'nt' else 'clear')
 
     print("Starting bot...")
 
@@ -82,10 +82,8 @@ def get_or_create_user(user_id):
     user = User.get_or_none(User.user_id == user_id)
 
     if user is not None:
-        print("User found")
         return user
 
-    print("User not found, creating new user")
     user = User(user_id=user_id, current_step=ProcessStep.INITIAL.value)
     user.save()
     return user

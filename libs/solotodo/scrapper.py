@@ -27,9 +27,10 @@ def get_store(id):
     data = requests.get(url).json()
     
     return Store(
-        solotodo_id=id,
+        solotodo_id=int(id),
         name=data['name'],
         logo_url=data['logo'],
+        preferred_payment_method=data['preferred_payment_method']
     )
     
         
@@ -132,7 +133,7 @@ def lower_prices_from_list_of_entities(entities, product):
     )
 
 def formating_datetime(datetime_iso):
-    return datetime.datetime.fromisoformat(datetime_iso[:-8])
+    return datetime.datetime.fromisoformat(datetime_iso.split('.')[0].replace("Z", ""))
 
 
 def parse_price(active_registry, product: Product, store_solotodo_id = None, external_url = None, ):
@@ -145,40 +146,3 @@ def parse_price(active_registry, product: Product, store_solotodo_id = None, ext
         external_url=external_url,
         timestamp=formating_datetime(active_registry['timestamp'])
     )
-
-
-""" def pDesc(price):
-
-    oldItems = fl.itemS_all('items.db','items')
-    nItems = len(oldItems)
-    if nItems != 0:
-        for item in oldItems:
-                if int(item[1]) != int(price):
-                    if int(item[1]) > int(price):                 
-                        valor_original = int(item[1])
-                        valor_nuevo = int(price)
-                        descuento = valor_original - valor_nuevo
-                        porcentaje_descuento = (descuento * 100) / valor_original
-                        porcentaje_descuento = round(porcentaje_descuento, 2)
-                        return (int(porcentaje_descuento*0.01)) 
- 
-
-def textDescuento(price):
-    descuento = pDesc(price)
-    if descuento >= 0 and descuento <= 10:
-        return  f"💩\n"
-    elif descuento > 10 and descuento <= 30:
-        return  f"😊\n"
-    elif descuento > 30 and descuento <= 50:
-        return  f"😲\n"
-    elif descuento > 50 and descuento <= 60:
-        return  f"🤑\n"
-    elif descuento > 60  and descuento <= 80:
-        return  f"🅱\n"
-    elif descuento > 80 and descuento <= 90:
-        return  f"🅰\n"
-    elif descuento >= 90 and descuento <= 100:
-        return  f"🔥\n"
-    else:
-        return f"🤔\n"
-        """

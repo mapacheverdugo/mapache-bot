@@ -3,6 +3,7 @@
 
 import schedule
 from peewee import *
+from telegram import LinkPreviewOptions
 
 from database import *
 from libs.solotodo.models.price import Price
@@ -20,18 +21,19 @@ class SoloTodo:
         self.messager = messager
         
         db.create_tables([ProductSubscription, Product, Price, Store])
-
+        
+        #self.get_lowest_historical_prices(Product.get_or_none(Product.id == 2))
         self.schedule_jobs()
         
     def schedule_jobs(self):
         subscriptions = ProductSubscription.select()
         for subscription in subscriptions:
-            #self.check_prices(subscription)
+            self.check_prices(subscription)
             schedule.every(subscription.poll_interval).minutes.do(self.check_prices, subscription)
 
-    def get_lowest_historical_prices(self, product, limit=1):
-        normal_prices = Price.select().where(Price.product == product).order_by(Price.normal_price.asc()).limit(limit)
-        offer_prices = Price.select().where(Price.product == product).order_by(Price.offer_price.asc()).limit(limit)
+    def get_lowest_historical_prices(self, product, limit=3):
+        normal_prices = list((Price.select().where(Price.product_id == product.id, Price.normal_price > 0).order_by(Price.timestamp.desc())).group_by(Price.normal_price).order_by(Price.normal_price.asc()).limit(limit))
+        offer_prices = list((Price.select().where(Price.product_id == product.id, Price.offer_price > 0).order_by(Price.timestamp.desc())).group_by(Price.offer_price).order_by(Price.offer_price.asc()).limit(limit))
 
         return (normal_prices, offer_prices)
 
@@ -78,32 +80,48 @@ class SoloTodo:
                     "",
                 ]
 
-                historical_lowest_normal_price_store = self.get_store(historical_lowest_prices[0][0].store_solotodo_id)
-                historical_lowest_offer_price_store = self.get_store(historical_lowest_prices[1][0].store_solotodo_id)
+                lastest_seen_normal_price_store = self.get_store(latest_seen_prices[0].store_solotodo_id)
+                lastest_seen_offer_price_store = self.get_store(latest_seen_prices[1].store_solotodo_id)
 
-                message_lines.append(self.prices_message_variation("normal", latest_seen_prices[0].normal_price, current_prices[0].normal_price))
-                message_lines.append(self.prices_message_variation("oferta", latest_seen_prices[1].offer_price, current_prices[1].offer_price))
+
+                message_lines.append(self.prices_message_variation("normal", latest_seen_prices[0].normal_price, current_prices[0].normal_price), lastest_seen_normal_price_store)
+                message_lines.append(self.prices_message_variation("oferta", latest_seen_prices[1].offer_price, current_prices[1].offer_price), lastest_seen_offer_price_store)
             
                 message_lines.append("")
-                message_lines.append(f"Como referencia, el los precios históricos más bajos registrados en un año son")
-                message_lines.append(f"Precio normal: {format_currency(historical_lowest_prices[0][0].normal_price)} en {historical_lowest_normal_price_store.name}")
-                message_lines.append(f"Precio oferta: {format_currency(historical_lowest_prices[1][0].offer_price)} en {historical_lowest_offer_price_store.name}")
+                
+                message_lines.extend(self.product_prices_now_messages(current_prices[0], current_prices[1], lastest_seen_normal_price_store, lastest_seen_offer_price_store))
 
-                self.messager.send_message(subscription.user.user_id, "\n".join(message_lines), parse_mode='MarkdownV2')
+                self.messager.send_message(
+                    subscription.user.user_id,
+                    "\n".join(message_lines),
+                    parse_mode='MarkdownV2',
+                    link_preview_options=LinkPreviewOptions(
+                        is_disabled=True
+                    )
+                )
 
         subscription.latest_seen_normal_lower_price = current_prices[0]
         subscription.latest_seen_offer_lower_price = current_prices[1] 
         subscription.save()
 
-    def prices_message_variation(self, price_name, latest_price, current_price):
+    def store_details_text(self, price, store, is_offer=False, add_link=True):
+        str = f"en [{store.name}]({price.external_url})" if add_link else f"en {store.name}"
+        if is_offer:
+            if store.preferred_payment_method is not None:
+                str += f" con {store.preferred_payment_method}"
+            else:
+                str += " con efectivo"
+        return str
+
+    def prices_message_variation(self, price_name, latest_price, current_price, store):
         variation_percentage = (latest_price / current_price) * 100
 
         if variation_percentage > 100:
             return f"El precio {price_name} ha subido, antes era ~{format_currency(latest_price)}~ y ahora es {format_currency(current_price)} ({variation_percentage:.2f}% de aumento)"
         elif variation_percentage < 100:
-            return f"¡El precio {price_name} ha bajado! Antes era ~{format_currency(latest_price)}~ y ahora es {format_currency(current_price)} ({variation_percentage:.2f}% de descuento)"
+            return f"¡El precio {price_name} ha bajado {self.store_details_text(current_price, store, price_name == 'oferta')}! Antes era ~{format_currency(latest_price)}~ y ahora es {format_currency(current_price)} ({variation_percentage:.2f}% de descuento)"
         else:
-            return f"El precio {price_name} se mantiene en {format_currency(current_price)}"
+            return f"El precio {price_name} se mantiene en {format_currency(current_price)} {self.store_details_text(current_price, store, price_name == 'oferta')}"
 
     def add_start(self, user):
         user.current_step = ProcessStep.SOLOTODO_ADD_WAITING_URL.value
@@ -188,24 +206,32 @@ class SoloTodo:
             offer_price_store = self.get_store(product_summary.lower_offer_price.store_solotodo_id)
             normal_price_store = self.get_store(product_summary.lower_normal_price.store_solotodo_id)
 
-            messageLines = [
+            message_lines = [
                 escape_markdown_v2(f'¡Producto "{product_summary.product.name}" guardado con éxito!'),
                 "",
-                f"Su *precio normal* más bajo actualmente es: {escape_markdown_v2(format_currency(subscription.latest_seen_normal_lower_price.normal_price))} en [{escape_markdown_v2(normal_price_store.name)}]({subscription.latest_seen_normal_lower_price.external_url})",
-                f"Su *precio oferta* más bajo actualmente es: {escape_markdown_v2(format_currency(subscription.latest_seen_offer_lower_price.offer_price))} en [{escape_markdown_v2(offer_price_store.name)}]({subscription.latest_seen_offer_lower_price.external_url})",
-                "",
+            ]
+
+            message_lines.extend(self.product_prices_now_messages(product_summary.lower_normal_price, product_summary.lower_offer_price, normal_price_store, offer_price_store))
+
+            message_lines.append("")
+            message_lines.extend(self.product_pricing_history_summary(product_summary.product))
+            
+            message_lines.extend(["",
                 f"Revisaremos cada {subscription.poll_interval} minutos si hay cambios en el precio de este producto y te notificaremos si baja de precio",
                 "",
                 "Si tienes otro producto que quieras seguir, envía el link o ID del producto, de lo contrario, puedes volver al menu con /start"
-            ]
+            ])
 
             self.messager.send_message(
                 user.user_id, 
-                "\n".join(messageLines),
-                parse_mode='MarkdownV2'
+                "\n".join(message_lines),
+                parse_mode='MarkdownV2',
+                link_preview_options=LinkPreviewOptions(
+                    is_disabled=True
+                )
             )
         else:
-            messageLines = [
+            message_lines = [
                 escape_markdown_v2(f'¡Producto "{product_summary.product.name}" guardado con éxito!'),
                 "",
                 "Este producto no está disponible actualmente, te notificaremos cuando vuelva a estar disponible",
@@ -215,9 +241,42 @@ class SoloTodo:
 
             self.messager.send_message(
                 user.user_id, 
-                "\n".join(messageLines),
+                "\n".join(message_lines),
                 parse_mode='MarkdownV2'
             )
+
+    def product_prices_now_messages(self, normal_price, offer_price, normal_price_store, offer_price_store):
+        prices_are_the_same = normal_price.normal_price == offer_price.offer_price
+        stores_are_the_same = normal_price_store.solotodo_id == offer_price_store.solotodo_id
+        if (prices_are_the_same and stores_are_the_same):
+            return [
+                f"Actualmente su *precio con todo medio de pago* más bajo es: {escape_markdown_v2(format_currency(normal_price.normal_price))} en [{escape_markdown_v2(normal_price_store.name)}]({normal_price.external_url})",
+            ]
+
+        return [
+            f"Actualmente su *precio normal* más bajo es: {escape_markdown_v2(format_currency(normal_price.normal_price))} {self.store_details_text(normal_price, normal_price_store)}",
+            f"Actualmente su *precio oferta* más bajo es: {escape_markdown_v2(format_currency(offer_price.offer_price))} {self.store_details_text(offer_price, offer_price_store, is_offer=True)}",
+        ]
+    
+    def product_pricing_history_summary(self, product, limit=10):
+        message_lines = []
+
+        historical_lowest_prices = self.get_lowest_historical_prices(product, limit=limit)
+
+        message_lines.append(f"Como referencia, los precios históricos más bajos registrados en un año son")
+
+        for i in range(len(historical_lowest_prices[0])):
+            normal_price = historical_lowest_prices[0][i]
+            offer_price = historical_lowest_prices[1][i]
+
+            historical_lowest_normal_price_store = self.get_store(normal_price.store_solotodo_id)
+            historical_lowest_offer_price_store = self.get_store(offer_price.store_solotodo_id)
+
+            message_lines.append("")
+            message_lines.append(escape_markdown_v2(f"Precio normal: {format_currency(normal_price.normal_price)} {self.store_details_text(normal_price, historical_lowest_normal_price_store, add_link=False)} el {normal_price.timestamp.strftime('%d/%m/%Y')}"))
+            message_lines.append(escape_markdown_v2(f"Precio oferta: {format_currency(offer_price.offer_price)} {self.store_details_text(offer_price, historical_lowest_offer_price_store, add_link=False, is_offer=True)} el {offer_price.timestamp.strftime('%d/%m/%Y')}"))
+
+        return message_lines
 
 
     def get_store(self, id):
