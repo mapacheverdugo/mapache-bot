@@ -1,7 +1,12 @@
+import os
+
+from dotenv import load_dotenv
 from peewee import *
 
-db = SqliteDatabase('mapache_bot.db')
+load_dotenv()
+
+db = SqliteDatabase(os.getenv('DB_PATH'))
 
 def init_db():
     global db
-    db = SqliteDatabase('mapache_bot.db')
+    db = SqliteDatabase(os.getenv('DB_PATH'))
