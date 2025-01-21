@@ -1,4 +1,3 @@
-import locale
 import os
 
 from dotenv import load_dotenv
@@ -10,8 +9,6 @@ from models.process_step import ProcessStep
 from models.user import User
 
 load_dotenv()
-
-locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 messager = TeleBotMessager(os.getenv('TELEGRAM_BOT_API_KEY'))
 solotodo = SoloTodo(messager)
