@@ -1,6 +1,7 @@
 version: '3'
 services:
   bot:
+    pull_policy: build
     build:
       context: .
       dockerfile: Dockerfile
