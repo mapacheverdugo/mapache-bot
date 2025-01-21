@@ -1,16 +1,19 @@
 import locale
 import os
 
-import libs.secret as sc
+from dotenv import load_dotenv
+
 from database import *
 from libs.solotodo.solotodo import SoloTodo
 from messager import TeleBotMessager
 from models.process_step import ProcessStep
 from models.user import User
 
+load_dotenv()
+
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
-messager = TeleBotMessager(sc.api_key_telegram)
+messager = TeleBotMessager(os.getenv('TELEGRAM_BOT_API_KEY'))
 solotodo = SoloTodo(messager)
 
 @messager.message_handler(commands=['exit', 'cancel'])

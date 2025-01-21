@@ -2,7 +2,6 @@
 
 import datetime
 
-import pyshorteners
 import requests
 from retrying import retry
 
