@@ -1,4 +1,4 @@
-FROM amazonlinux:latest
+FROM amazonlinux:latest as build
 
 RUN yum update -y && \
     yum install -y git python3-pip
