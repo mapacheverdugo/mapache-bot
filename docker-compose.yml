@@ -4,7 +4,7 @@ services:
     build: .
     pull_policy: build
     restart: unless-stopped
-    container_name: inmobiliarias-scrapper
+    container_name: mapache-bot
     volumes:
       - .:/usr/src/app
     environment:
