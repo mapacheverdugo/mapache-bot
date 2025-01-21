@@ -7,4 +7,4 @@ services:
     volumes:
       - .:/usr/src/app
     environment:
-      - TELEGRAM_BOT_API_KEY: ${TELEGRAM_BOT_API_KEY}
+      - TELEGRAM_BOT_API_KEY
