@@ -1,5 +1,15 @@
 version: '3'
 services:
+  sqlite3:
+    image: hibitdev/sqlite:latest
+    container_name: sqlite
+    hostname: sqlite.hibit
+    ports:
+      - "8191:8191"
+    volumes:
+      - ./db/:/root/db/
+    command: [ "tail", "-f", "/dev/null" ]
+
   bot:
     build: .
     pull_policy: build
@@ -7,6 +17,7 @@ services:
     container_name: mapache-bot
     volumes:
       - .:/usr/src/app
+      - ./db/:/usr/src/app/db/
     environment:
       - TELEGRAM_BOT_API_KEY
       - DB_PATH
