@@ -1,13 +1,12 @@
-FROM python:3.9.21-slim as build
+FROM amazonlinux:latest
 
-RUN apt-get -qq update 
+RUN yum update -y && \
+    yum install -y git python3-pip
 
 WORKDIR /usr/src/bot
 
 COPY requirements.txt /usr/src/bot/
-
-RUN pip3 --quiet install --requirement requirements.txt \
-    --force-reinstall --upgrade
+RUN pip install -r /usr/src/bot/requirements.txt
 
 COPY . /usr/src/bot
 

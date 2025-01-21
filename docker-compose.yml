@@ -1,11 +1,5 @@
 version: '3'
 services:
-  sqlite3:
-    image: nouchka/sqlite3:latest
-    stdin_open: true
-    tty: true
-    volumes:
-      - ./db/:/root/db/
   bot:
     build: .
     pull_policy: build
@@ -13,7 +7,6 @@ services:
     container_name: mapache-bot
     volumes:
       - .:/usr/src/app
-      - ./db/:/usr/src/app/db/
     environment:
       - TELEGRAM_BOT_API_KEY
       - DB_PATH
