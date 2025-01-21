@@ -2,9 +2,8 @@ version: '3'
 services:
   bot:
     pull_policy: build
-    build:
-      context: .
-      dockerfile: Dockerfile
+    restart: unless-stopped
+    container_name: inmobiliarias-scrapper
     volumes:
       - .:/usr/src/app
     environment:
