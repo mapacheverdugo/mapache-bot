@@ -154,7 +154,8 @@ class SoloTodo:
         return message_lines
 
     def store_details_text(self, price: Price, store: Store, is_offer=False, add_link=True):
-        str = f"en [{store.name}]({price.external_url})" if add_link else f"en {store.name}"
+        store_name = escape_markdown_v2(store.name)
+        str = f"en [{store_name}]({price.external_url})" if add_link else f"en {store_name}"
         if is_offer:
             if store.preferred_payment_method is not None:
                 str += f" con {store.preferred_payment_method}"
@@ -175,7 +176,7 @@ class SoloTodo:
             variation_text = escape_markdown_v2(f"({(100 - variation_percentage):.2f}% de descuento)")
             return f"¡El precio {price_name} ha bajado {self.store_details_text(current_price, store, price_name == 'oferta')}\\! Antes era ~{escape_markdown_v2(format_currency(latest_price_value))}~ y ahora es {escape_markdown_v2(format_currency(current_price_value))} {variation_text}"
         else:
-            return f"El precio {price_name} se mantiene en {format_currency(current_price_value)} {self.store_details_text(current_price, store, price_name == 'oferta')}"
+            return f"El precio {price_name} se mantiene en {escape_markdown_v2(format_currency(current_price_value))} {self.store_details_text(current_price, store, price_name == 'oferta')}"
 
     def add_start(self, user):
         user.current_step = ProcessStep.SOLOTODO_ADD_WAITING_URL.value
