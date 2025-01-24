@@ -10,10 +10,12 @@ from libs.solotodo.models.product import Product
 from libs.solotodo.models.product_summary import ProductSummary
 from libs.solotodo.models.store import Store
 
+base_url = "https://publicapi.solotodo.com"
+mock_base_url = "https://mock.apidog.com/m1/794146-772682-default"
 
 @retry(stop_max_attempt_number=3)
-def get_current_prices(product):
-    url = f"https://publicapi.solotodo.com/products/available_entities/?ids={product.id}"
+def get_current_prices(product: Product):
+    url = f"{mock_base_url}/products/available_entities/?ids={product.solotodo_id}"
     data = requests.get(url).json()
     
     result = data['results'][0]
@@ -21,8 +23,8 @@ def get_current_prices(product):
     return lower_prices_from_list_of_entities(result['entities'], product)
 
 @retry(stop_max_attempt_number=3)
-def get_store(id):
-    url = f"https://publicapi.solotodo.com/stores/{id}"
+def get_store(id: int):
+    url = f"{base_url}/stores/{id}"
     data = requests.get(url).json()
     
     return Store(
@@ -34,20 +36,20 @@ def get_store(id):
     
         
 @retry(stop_max_attempt_number=3)
-def get_product_summary(id):
+def get_product_summary(id: int):
     try:
         now = datetime.datetime.now(datetime.timezone.utc)
         timedelta = datetime.timedelta(days=365)
         delta_datetime = now - timedelta
 
-        product_url = f"https://publicapi.solotodo.com/products/{id}/pricing_history/?timestamp_after={delta_datetime.isoformat()}&timestamp_before={now.isoformat()}&exclude_refurbished=false"
+        product_url = f"{base_url}/products/{id}/pricing_history/?timestamp_after={delta_datetime.isoformat()}&timestamp_before={now.isoformat()}&exclude_refurbished=false"
         product_data = requests.get(product_url).json()
         
        
 
         first_entity = product_data[0]['entity']
         name = first_entity['name']
-        url = f"https://www.solotodo.cl/products/{id}"
+        url = f"{base_url}/products/{id}"
 
         product = Product(
             solotodo_id=int(id),

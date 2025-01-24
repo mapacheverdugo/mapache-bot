@@ -1,5 +1,8 @@
 import os
+import threading
+import time
 
+import schedule
 from dotenv import load_dotenv
 
 from database import *
@@ -68,7 +71,7 @@ def everything_else(message):
         
 
 def main():
-    #os.system('cls' if os.name == 'nt' else 'clear')
+    os.system('cls' if os.name == 'nt' else 'clear')
 
     print("Starting bot...")
 
@@ -76,7 +79,24 @@ def main():
     db.connect()
     db.create_tables([User])
 
-    messager.poll()
+    def run_schedule():
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+
+    def run_messager():
+        messager.poll()
+
+    schedule_thread = threading.Thread(target=run_schedule)
+    messager_thread = threading.Thread(target=run_messager)
+
+    schedule_thread.start()
+    messager_thread.start()
+
+    schedule_thread.join()
+    messager_thread.join()
+
+    
 
 def get_or_create_user(user_id):
     user = User.get_or_none(User.user_id == user_id)
