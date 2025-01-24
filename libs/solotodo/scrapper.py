@@ -15,7 +15,7 @@ mock_base_url = "https://mock.apidog.com/m1/794146-772682-default"
 
 @retry(stop_max_attempt_number=3)
 def get_current_prices(product: Product):
-    url = f"{mock_base_url}/products/available_entities/?ids={product.solotodo_id}"
+    url = f"{base_url}/products/available_entities/?ids={product.solotodo_id}"
     data = requests.get(url).json()
     
     result = data['results'][0]
